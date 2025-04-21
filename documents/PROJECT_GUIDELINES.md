@@ -44,14 +44,21 @@
    - Use **SQLAlchemy** with **pyodbc** for connecting to **SQL Server**.
    - Store the full connection string in `config/settings.py` or a `.env` file.
    - Implement repository classes in `data/repositories/` for DB operations.
-   - Schema definitions should reside in `data/schema.py` and follow the structure of `sp_data_schema.md`.
-   - Track migrations in `data/migrations/` and avoid schema drift.
+   - Schema definitions should reside in `data/schema.py`.
 
-   **➕ NEW ADDITIONS**:
+   ### 📘 Schema Alignment Rules (NEW)
 
-   - **Always reference the latest `sp_data_schema.md`** before writing queries, models, or repository logic.
-   - **If a new field or table is required**, explicitly recommend the schema change to the user before proceeding with the implementation.
-   - All schema extensions must be logged and reflected in both `data/schema.py` and `sp_data_schema.md`.
+   - **All database interactions must align with `sp_data_schema.md`.**
+   - **Before writing any query or model**, check `sp_data_schema.md` and `data/schema.py` for field definitions and expected types.
+   - When **new fields or tables** are needed during development:
+
+     1. **Propose the changes explicitly** in the code comments or Git PR description.
+     2. Update the schema definitions in both `sp_data_schema.md` and `data/schema.py`.
+     3. Ensure proper migration scripts are added under `data/migrations/`.
+     4. Inform the team (or the assistant) that a schema revision has occurred so downstream systems stay aligned.
+
+   - All repository classes must use the latest schema version.
+   - Avoid schema drift by validating all changes against the canonical schema file.
 
 7. **Backtesting and Real-Time**
 
