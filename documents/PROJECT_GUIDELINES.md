@@ -40,29 +40,18 @@
      - Event-based (e.g., volume spike or pattern detector)
 
 6. **Database Access (SQL Server)**
+
    - Use **SQLAlchemy** with **pyodbc** for connecting to **SQL Server**.
    - Store the full connection string in `config/settings.py` or a `.env` file.
    - Implement repository classes in `data/repositories/` for DB operations.
    - Schema definitions should reside in `data/schema.py` and follow the structure of `sp_data_schema.md`.
    - Track migrations in `data/migrations/` and avoid schema drift.
-   - Example connection setup:
 
-```python
-# settings.py
-SQLSERVER_CONN_STRING = (
-    "DRIVER={ODBC Driver 17 for SQL Server};"
-    "SERVER=localhost;DATABASE=CreditSpreadsDB;"
-    "UID=user;PWD=password"
-)
+   **➕ NEW ADDITIONS**:
 
-# db_engine.py
-import urllib
-from sqlalchemy import create_engine
-from config.settings import SQLSERVER_CONN_STRING
-
-conn_str = urllib.parse.quote_plus(SQLSERVER_CONN_STRING)
-engine = create_engine(f"mssql+pyodbc:///?odbc_connect={conn_str}")
-```
+   - **Always reference the latest `sp_data_schema.md`** before writing queries, models, or repository logic.
+   - **If a new field or table is required**, explicitly recommend the schema change to the user before proceeding with the implementation.
+   - All schema extensions must be logged and reflected in both `data/schema.py` and `sp_data_schema.md`.
 
 7. **Backtesting and Real-Time**
 
