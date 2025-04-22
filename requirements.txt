@@ -1,0 +1,10 @@
+numpy==1.24.4
+pandas
+pandas-ta==0.3.14b0
+typer[all]
+sqlalchemy
+pyodbc
+pytest
+setuptools
+wheel
+build
