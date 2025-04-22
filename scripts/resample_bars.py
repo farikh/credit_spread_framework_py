@@ -2,15 +2,27 @@
 import os
 import pandas as pd
 import argparse
+import logging
 from sqlalchemy import text
 from sqlalchemy.types import String, Float, DateTime
 from datetime import datetime, timezone
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from data.db_engine import engine
-import sys
-import io
 
-os.environ["PYTHONIOENCODING"] = "utf-8"
+# ----------------------------
+# Configure logging
+# ----------------------------
+def setup_logging(logfile=None):
+    handlers = [logging.StreamHandler()]
+    if logfile:
+        handlers.append(logging.FileHandler(logfile, encoding='utf-8'))
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(message)s",
+        handlers=handlers
+    )
+
+logger = logging.getLogger(__name__)
 
 TIMEFRAMES = {
     "3m": "3min",
@@ -26,26 +38,18 @@ TABLE_MAP = {
     "1d": "spx_ohlcv_1d"
 }
 
-log_file = open("resample_output.log", "w", buffering=1, encoding="utf-8")
-sys.stdout = io.TextIOWrapper(log_file.buffer, encoding="utf-8", line_buffering=True)
-sys.stderr = io.TextIOWrapper(log_file.buffer, encoding="utf-8", line_buffering=True)
-
-def clean_text(s):
-    try:
-        return str(s)
-    except Exception as e:
-        return f"[ENCODE ERROR] {e} | Raw: {repr(s)}"
-
-def log(message):
-    encoded = clean_text(message)
-    debugged = encoded.encode("utf-8", errors="backslashreplace").decode("utf-8")
-    print(debugged, flush=True)
+INTERVAL_MAP = {
+    "3m": 3,
+    "15m": 15,
+    "1h": 60,
+    "1d": 1440
+}
 
 def get_full_range():
     query = text("SELECT MIN(timestamp) as [start], MAX(timestamp) as [end] FROM spx_ohlcv_1m")
     with engine.begin() as conn:
         result = conn.execute(query).fetchone()
-        log(f"[DEBUG] Full 1m range: {result.start} to {result.end}")
+        logger.info(f"1m data range: {result.start} to {result.end}")
         return pd.to_datetime(result.start).tz_localize("UTC"), pd.to_datetime(result.end).tz_localize("UTC")
 
 def load_raw_data(start, end):
@@ -57,7 +61,7 @@ def load_raw_data(start, end):
     with engine.begin() as conn:
         df = pd.read_sql(query, conn, params={"start": start, "end": end})
     df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True)
-    log(f"[DEBUG] Loaded {len(df)} 1m bars")
+    logger.info(f"Loaded {len(df)} 1m bars.")
     return df
 
 def resample_bars(df, rule):
@@ -74,12 +78,24 @@ def resample_bars(df, rule):
     resampled["bar_id"] = resampled["timestamp"].dt.strftime("%Y%m%d%H%M")
     return resampled[["bar_id", "timestamp", "ticker", "open", "high", "low", "close", "spy_volume"]]
 
-def delete_existing_data(table_name, start, end):
-    log(f"[INFO] Deleting rows from {table_name} between {start} and {end}")
+def delete_existing_data(table_name, start, end, interval):
+    logger.info(f"Deleting aligned bars from {table_name} for {interval}-minute intervals between {start} and {end}...")
+    delete_sql = f"""
+    WITH aligned_times AS (
+        SELECT DISTINCT 
+            DATEADD(MINUTE, (DATEDIFF(MINUTE, 0, timestamp) / :interval) * :interval, 0) AS aligned_timestamp
+        FROM dbo.spx_ohlcv_1m
+        WHERE timestamp BETWEEN :start AND :end
+    )
+    DELETE t
+    FROM dbo.[{table_name}] t
+    JOIN aligned_times a
+      ON t.timestamp = a.aligned_timestamp;
+    """
     with engine.begin() as conn:
         conn.execute(
-            text(f"""DELETE FROM [dbo].[{table_name}] WHERE timestamp >= :start AND timestamp < :end"""), 
-            {"start": start, "end": end}
+            text(delete_sql),
+            {"interval": interval, "start": start, "end": end}
         )
 
 def insert_to_db(table_name, df):
@@ -94,35 +110,32 @@ def insert_to_db(table_name, df):
         "spy_volume": Float()
     }
     try:
-        log(f"[INFO] Inserting {len(df)} rows into {table_name}...")
+        logger.info(f"Inserting {len(df)} rows into {table_name}...")
         with engine.begin() as conn:
             df.to_sql(table_name, con=conn, if_exists="append", index=False, schema="dbo", dtype=dtypes)
-            count = conn.execute(
-                text(f"""SELECT COUNT(*) FROM [dbo].[{table_name}] WHERE timestamp BETWEEN :start AND :end"""), 
-                {"start": df['timestamp'].min(), "end": df['timestamp'].max()}
-            ).scalar()
-            log(f"[VERIFY] {count} rows now in {table_name} for that range.")
     except Exception as e:
-        log(f"[ERROR] Failed to insert into {table_name}: {e}")
+        logger.error(f"Failed to insert into {table_name}: {e}", exc_info=True)
 
-def run_for_timeframe(timeframe, df, start, end, debug):
-    if timeframe not in TIMEFRAMES:
-        raise ValueError(f"[ERROR] Invalid timeframe: {timeframe}")
-    rule = TIMEFRAMES[timeframe]
-    table_name = TABLE_MAP[timeframe]
+def run_for_timeframe(timeframe, df, start, end, debug, step_num, total_steps):
+    try:
+        if timeframe not in TIMEFRAMES:
+            raise ValueError(f"Invalid timeframe: {timeframe}")
+        rule = TIMEFRAMES[timeframe]
+        table_name = TABLE_MAP[timeframe]
+        interval = INTERVAL_MAP[timeframe]
 
-    log(f"[{timeframe}] Resampling...")
-    result = resample_bars(df.copy(), rule)
-    log(f"[{timeframe}] Resampled to {len(result)} bars")
+        logger.info(f"[{step_num}/{total_steps}] Processing timeframe: {timeframe}...")
+        result = resample_bars(df.copy(), rule)
+        logger.info(f"Resampled {len(result)} bars for {timeframe}.")
 
-    if debug:
-        log(f"[{timeframe}] DEBUG preview:")
-        log(result.head().to_string())
-        log(f"[{timeframe}] Would insert {len(result)} rows into {table_name}")
-    else:
-        delete_existing_data(table_name, start, end)
-        insert_to_db(table_name, result)
-        log(f"[{timeframe}] ✅ Done.")
+        if debug:
+            logger.debug(result.head().to_string())
+        else:
+            delete_existing_data(table_name, start, end, interval)
+            insert_to_db(table_name, result)
+        logger.info(f"✅ Done with {timeframe}.")
+    except Exception as e:
+        logger.error(f"[ERROR] Exception in timeframe {timeframe}: {e}", exc_info=True)
 
 def main():
     parser = argparse.ArgumentParser()
@@ -130,22 +143,34 @@ def main():
     parser.add_argument("--start", help="UTC start datetime (e.g. 2025-04-04T00:00:00)")
     parser.add_argument("--end", help="UTC end datetime (e.g. 2025-04-04T23:59:59)")
     parser.add_argument("--debug", action="store_true")
+    parser.add_argument("--logfile", help="Optional log file path")
     args = parser.parse_args()
 
+    setup_logging(logfile=args.logfile)
     full_start, full_end = get_full_range()
     start = pd.to_datetime(args.start).tz_localize("UTC") if args.start else full_start
     end = pd.to_datetime(args.end).tz_localize("UTC") if args.end else full_end
 
-    log(f"[INFO] Using range: {start} to {end}")
+    logger.info(f"Using range: {start} to {end}")
     raw = load_raw_data(start, end)
 
     if args.timeframe:
-        run_for_timeframe(args.timeframe, raw, start, end, args.debug)
+        run_for_timeframe(args.timeframe, raw, start, end, args.debug, 1, 1)
     else:
-        log("[INFO] Running all timeframes in parallel...")
+        total = len(TIMEFRAMES)
         with ThreadPoolExecutor() as executor:
-            for tf in TIMEFRAMES.keys():
-                executor.submit(run_for_timeframe, tf, raw.copy(), start, end, args.debug)
+            futures = {
+                executor.submit(run_for_timeframe, tf, raw.copy(), start, end, args.debug, idx + 1, total): tf
+                for idx, tf in enumerate(TIMEFRAMES.keys())
+            }
+            for future in as_completed(futures):
+                tf = futures[future]
+                try:
+                    future.result()
+                except Exception as exc:
+                    logger.error(f"Thread exception for {tf}: {exc}", exc_info=True)
+
+    logger.info("[COMPLETE] All timeframes processed. Check logs for details.")
 
 if __name__ == "__main__":
     main()
