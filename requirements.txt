@@ -8,3 +8,4 @@ pytest
 setuptools
 wheel
 build
+python-dotenv

@@ -7,4 +7,10 @@ class RSIIndicator(BaseIndicator):
         self.period = period
 
     def calculate(self, bars: pd.DataFrame) -> pd.Series:
-        return ta.rsi(bars['close'], length=self.period)
+        """
+        Calculate the RSI indicator on the given bars DataFrame.
+        Ensures the result Series uses the 'timestamp' as its index.
+        """
+        rsi = ta.rsi(bars['close'], length=self.period)
+        rsi.index = bars['timestamp']  # ✅ Ensure index is timestamp for correct downstream usage
+        return rsi
