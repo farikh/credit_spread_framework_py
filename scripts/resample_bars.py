@@ -13,9 +13,15 @@ from data.db_engine import engine
 # Configure logging
 # ----------------------------
 def setup_logging(logfile=None):
-    handlers = [logging.StreamHandler()]
+    handlers = []
     if logfile:
         handlers.append(logging.FileHandler(logfile, encoding='utf-8'))
+    
+    # Reduce SQLAlchemy engine verbosity
+    logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
+    logging.getLogger("sqlalchemy.pool").setLevel(logging.WARNING)
+    logging.getLogger("sqlalchemy.dialects").setLevel(logging.WARNING)
+
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(message)s",
