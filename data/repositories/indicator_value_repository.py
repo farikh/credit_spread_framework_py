@@ -7,12 +7,10 @@ import pandas as pd
 def save_indicator_values_to_db(values, indicator_name, timeframe):
     print(f"[INFO] Saving values for {indicator_name} on timeframe {timeframe}...")
 
-    # Setup DB engine
     conn_str = urllib.parse.quote_plus(SQLSERVER_CONN_STRING)
     engine = create_engine(f"mssql+pyodbc:///?odbc_connect={conn_str}")
 
-    # Resolve IndicatorId from indicators table
-    with engine.begin() as conn:  # Safely starts transaction, handles commit/rollback automatically
+    with engine.begin() as conn:
         result = conn.execute(
             text("SELECT IndicatorId FROM indicators WHERE ShortName = :short_name"),
             {"short_name": indicator_name}
@@ -24,23 +22,23 @@ def save_indicator_values_to_db(values, indicator_name, timeframe):
         indicator_id = result[0]
 
         insert_stmt = text("""
-            INSERT INTO indicator_values (BarId, Timeframe, IndicatorId, Value, TimestampStart, TimestampEnd)
-            VALUES (:bar_id, :timeframe, :indicator_id, :value, :timestamp_start, :timestamp_end)
+            INSERT INTO indicator_values (BarId, Timeframe, IndicatorId, Value, TimestampStart)
+            VALUES (:bar_id, :timeframe, :indicator_id, :value, :timestamp_start)
         """)
 
         rows_inserted = 0
-        for i, (timestamp, value) in enumerate(values.items()):
+        for _, row in values.iterrows():
+            value = row['rsi']
             if pd.isna(value):
                 continue  # Skip NaNs
 
-            bar_id = f"{timestamp.strftime('%Y%m%d%H%M')}_SPX"
+            bar_id = f"{row['timestamp_start'].strftime('%Y%m%d%H%M')}_SPX"
             conn.execute(insert_stmt, {
                 "bar_id": bar_id,
                 "timeframe": timeframe,
                 "indicator_id": indicator_id,
                 "value": float(value),
-                "timestamp_start": timestamp,
-                "timestamp_end": None
+                "timestamp_start": row['timestamp_start']
             })
             rows_inserted += 1
 
