@@ -1,38 +1,50 @@
 import typer
 from datetime import datetime, timezone
+from concurrent.futures import ThreadPoolExecutor
 from credit_spread_framework.indicators.factory import get_indicator_class
-from credit_spread_framework.data.repositories.indicator_value_repository import save_indicator_values_to_db
 from credit_spread_framework.data.repositories.ohlcv_repository import load_bars_from_db
+from credit_spread_framework.data.repositories.indicator_value_repository import save_indicator_values_to_db
+from credit_spread_framework.data.repositories.indicator_repository import get_all_indicators
 
 app = typer.Typer()
 
-@app.command()
-def enrich_data(
-    indicator: str = typer.Option(..., "--indicator", "-i", help="Indicator short name (e.g., RSI, EMA)"),
-    timeframe: str = typer.Option(..., "--timeframe", "-t", help="Timeframe (e.g., 1m, 15m, 1h)"),
-    start: str = typer.Option(..., "--start", help="Start date (YYYY-MM-DD)"),
-    end: str = typer.Option(..., "--end", help="End date (YYYY-MM-DD)")
-):
-    """
-    Enrich the indicator values table with calculated values for the given indicator and timeframe.
-    """
-    start_dt = datetime.fromisoformat(start).replace(tzinfo=timezone.utc)
-    end_dt = datetime.fromisoformat(end).replace(tzinfo=timezone.utc)
+TIMEFRAMES = ['1m', '3m', '15m', '1h', '1d']
 
-    print(f"Loading bars for timeframe: {timeframe} from {start_dt} to {end_dt}...")
+def run_enrich_for_indicator(indicator: str, timeframe: str, start: str, end: str):
+    print(f"[INFO] Running enrichment for {indicator} on {timeframe}...")
+    start_dt = datetime.fromisoformat(start).replace(tzinfo=timezone.utc) if start else None
+    end_dt = datetime.fromisoformat(end).replace(tzinfo=timezone.utc) if end else None
+
     bars = load_bars_from_db(timeframe, start_dt, end_dt)
-
-    print(f"Initializing indicator: {indicator}...")
-    IndicatorClass = get_indicator_class(indicator)  # Lookup by SHORT NAME
+    IndicatorClass = get_indicator_class(indicator)
     indicator_instance = IndicatorClass()
 
-    print("Calculating indicator values...")
     values = indicator_instance.calculate(bars)
-
-    print("Saving results to database...")
     save_indicator_values_to_db(values, indicator, timeframe)
 
-    print("✅ Enrichment complete.")
+@app.command()
+def enrich_data(
+    indicator: list[str] = typer.Option(None, "--indicator", "-i", help="Indicators to compute (e.g. RSI EMA ADX)"),
+    timeframe: list[str] = typer.Option(None, "--timeframe", "-t", help="Timeframes (e.g. 1m 15m 1h)"),
+    start: str = typer.Option(None, "--start", help="Start date (YYYY-MM-DD)"),
+    end: str = typer.Option(None, "--end", help="End date (YYYY-MM-DD)"),
+    threads: int = typer.Option(4, "--threads", help="Number of threads to use")
+):
+    indicators = indicator or get_all_indicators()
+    timeframes = timeframe or TIMEFRAMES
+
+    print(f"[INFO] Indicators: {indicators}")
+    print(f"[INFO] Timeframes: {timeframes}")
+    print(f"[INFO] Threads: {threads}")
+
+    with ThreadPoolExecutor(max_workers=threads) as executor:
+        futures = [
+            executor.submit(run_enrich_for_indicator, ind, tf, start, end)
+            for ind in indicators
+            for tf in timeframes
+        ]
+        for future in futures:
+            future.result()
 
 if __name__ == "__main__":
     app()
