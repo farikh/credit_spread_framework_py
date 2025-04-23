@@ -12,6 +12,6 @@ class RSIIndicator(BaseIndicator):
         Returns a DataFrame containing timestamp and the RSI value.
         """
         bars = bars.copy()
-        bars['rsi'] = ta.rsi(bars['close'], length=self.period)
+        bars['rsi'] = ta.rsi(bars['close_price'], length=self.period)
         bars['timestamp_start'] = bars['timestamp']  # Assign 'timestamp_start' directly from 'timestamp'
         return bars[['timestamp_start', 'rsi']]

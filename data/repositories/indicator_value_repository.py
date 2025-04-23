@@ -1,14 +1,23 @@
+from credit_spread_framework.data.db_engine import get_engine
+from sqlalchemy import text
 import sqlalchemy as sa
-from credit_spread_framework.config.settings import SQLSERVER_CONN_STRING
 import urllib
-from sqlalchemy import create_engine, text
 import pandas as pd
+from threading import current_thread
+import logging
+
+# Reduce SQLAlchemy engine verbosity:
+logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
+
+engine = get_engine()
 
 def save_indicator_values_to_db(values, indicator_name, timeframe):
-    print(f"[INFO] Saving values for {indicator_name} on timeframe {timeframe}...")
+    thread_name = current_thread().name
 
-    conn_str = urllib.parse.quote_plus(SQLSERVER_CONN_STRING)
-    engine = create_engine(f"mssql+pyodbc:///?odbc_connect={conn_str}")
+    # Determine day (if possible)
+    day = values['timestamp_start'].iloc[0].date() if not values.empty else 'N/A'
+
+    print(f"[{thread_name}] {indicator_name} on {timeframe} | {day} | Start saving...")
 
     with engine.begin() as conn:
         result = conn.execute(
@@ -17,8 +26,9 @@ def save_indicator_values_to_db(values, indicator_name, timeframe):
         ).fetchone()
 
         if result is None:
-            print(f"[ERROR] Indicator '{indicator_name}' not found in database.")
+            print(f"[{thread_name}] [ERROR] Indicator '{indicator_name}' not found in database.")
             return
+
         indicator_id = result[0]
 
         insert_stmt = text("""
@@ -42,4 +52,4 @@ def save_indicator_values_to_db(values, indicator_name, timeframe):
             })
             rows_inserted += 1
 
-    print(f"[SUCCESS] Inserted {rows_inserted} indicator values.")
+    print(f"[{thread_name}] {indicator_name} on {timeframe} | {day} | Inserted {rows_inserted} rows.")
