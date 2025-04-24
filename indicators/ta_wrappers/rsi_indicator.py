@@ -15,3 +15,6 @@ class RSIIndicator(BaseIndicator):
         bars['rsi'] = ta.rsi(bars['close_price'], length=self.period)
         bars['timestamp_start'] = bars['timestamp']  # Assign 'timestamp_start' directly from 'timestamp'
         return bars[['timestamp_start', 'rsi']]
+
+__all__ = ["RSIIndicator"]
+RSIIndicator = RSIIndicator
