@@ -1,3 +1,4 @@
+
 import typer
 from datetime import datetime, timezone
 from concurrent.futures import ThreadPoolExecutor
@@ -10,17 +11,19 @@ app = typer.Typer()
 
 TIMEFRAMES = ['1m', '3m', '15m', '1h', '1d']
 
-def run_enrich_for_indicator(indicator: str, timeframe: str, start: str, end: str):
-    print(f"[INFO] Running enrichment for {indicator} on {timeframe}...")
+def run_enrich_for_indicator(indicator: str, timeframe: str, start: str, end: str, qualifier: str):
+    print(f"[INFO] Running enrichment for {indicator} on {timeframe} with qualifier '{qualifier}'...")
     start_dt = datetime.fromisoformat(start).replace(tzinfo=timezone.utc) if start else None
     end_dt = datetime.fromisoformat(end).replace(tzinfo=timezone.utc) if end else None
 
     bars = load_bars_from_db(timeframe, start_dt, end_dt)
-    IndicatorClass = get_indicator_class(indicator)
-    indicator_instance = IndicatorClass()
-
+    IndicatorClass, metadata = get_indicator_class(indicator)
+    indicator_instance = IndicatorClass(
+        parameters_json=metadata.get("ParametersJson") or {}, 
+        qualifier=qualifier
+    )
     values = indicator_instance.calculate(bars)
-    save_indicator_values_to_db(values, indicator, timeframe)
+    save_indicator_values_to_db(values, indicator, timeframe, metadata)
 
 @app.command()
 def enrich_data(
@@ -28,7 +31,8 @@ def enrich_data(
     timeframe: list[str] = typer.Option(None, "--timeframe", "-t", help="Timeframes (e.g. 1m 15m 1h)"),
     start: str = typer.Option(None, "--start", help="Start date (YYYY-MM-DD)"),
     end: str = typer.Option(None, "--end", help="End date (YYYY-MM-DD)"),
-    threads: int = typer.Option(4, "--threads", help="Number of threads to use")
+    threads: int = typer.Option(4, "--threads", help="Number of threads to use"),
+    qualifier: str = typer.Option(None, "--qualifier", "-q", help="Qualifier (e.g. 'time', 'linear', 'volume')")
 ):
     indicators = indicator or get_all_indicators()
     timeframes = timeframe or TIMEFRAMES
@@ -39,7 +43,7 @@ def enrich_data(
 
     with ThreadPoolExecutor(max_workers=threads) as executor:
         futures = [
-            executor.submit(run_enrich_for_indicator, ind, tf, start, end)
+            executor.submit(run_enrich_for_indicator, ind, tf, start, end, qualifier)
             for ind in indicators
             for tf in timeframes
         ]

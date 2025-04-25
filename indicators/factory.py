@@ -21,6 +21,8 @@ def get_indicator_class(short_name: str):
     metadata = dict(result)
     class_path = metadata["ClassPath"]
     module_path, class_name = class_path.rsplit(".", 1)
+    module_path = module_path.strip()        # ✅ Added to fix whitespace issue
+    class_name = class_name.strip()          # ✅ Added to fix whitespace issue
 
     try:
         module = importlib.import_module(module_path)
@@ -51,6 +53,8 @@ def get_all_indicator_classes():
 
         try:
             module_path, class_name = class_path.rsplit(".", 1)
+            module_path = module_path.strip()    # ✅ Added to fix whitespace issue
+            class_name = class_name.strip()      # ✅ Added to fix whitespace issue
             module = importlib.import_module(module_path)
             indicator_class = getattr(module, class_name)
             indicator_classes[short_name] = (indicator_class, metadata)
