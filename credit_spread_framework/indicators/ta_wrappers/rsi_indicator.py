@@ -11,9 +11,10 @@ class RSIIndicator(BaseIndicator):
 
     def calculate(self, bars: pd.DataFrame) -> pd.DataFrame:
         bars = bars.copy()
-        bars['value'] = ta.rsi(bars['close_price'], length=self.period)
+        price_col = 'close_price' if 'close_price' in bars.columns else 'close'
+        bars['rsi'] = ta.rsi(bars[price_col], length=self.period)
         bars['timestamp_start'] = bars['timestamp']
-        return bars[['timestamp_start', 'value']]
+        return bars[['timestamp_start', 'rsi']]
 
 __all__ = ["RSIIndicator"]
 RSIIndicator = RSIIndicator
