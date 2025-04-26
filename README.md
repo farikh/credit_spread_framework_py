@@ -36,6 +36,7 @@ pytest -q
 ├── scripts/    – Prototyping utilities
 ├── tests/      – Unit and integration tests
 ├── setup.py    – Package configuration
+├── FEATURES.md – Feature documentation and usage examples
 ├── README.md   – (this file)
 └── credit_spread_framework/
     └── documents/  – Detailed docs (see below)
@@ -52,6 +53,28 @@ All deep-dive docs are located in **credit_spread_framework/documents/**:
 - [Indicator Setup & Roadmap](credit_spread_framework/documents/indicator_setup_and_roadmap.md)
 
 ---
+
+## 🗄️ Database Configuration
+
+Before running any CLI commands (enrich, backtest, snapshot), ensure your database connection string is set:
+
+- Windows Authentication (Trusted Connection):
+
+  In PowerShell:
+
+  ```powershell
+  $Env:SQLSERVER_CONN_STRING = "DRIVER={ODBC Driver 17 for SQL Server};SERVER=LAPTOP-DKR7BL4Q\\SQLEXPRESS;DATABASE=CreditSpreadsDB;Trusted_Connection=yes;"
+  ```
+
+- SQL Login:
+
+  In PowerShell:
+
+  ```powershell
+  $Env:SQLSERVER_CONN_STRING = "DRIVER={ODBC Driver 17 for SQL Server};SERVER=LAPTOP-DKR7BL4Q\\SQLEXPRESS;DATABASE=CreditSpreadsDB;User Id=credit_spread_user;Password=SuperSecretPass!;"
+  ```
+
+Alternatively, place the same `SQLSERVER_CONN_STRING` (or `SQLSERVER_SQL_LOGIN_CONN_STRING`) in a `.env` file at the project root. The framework will automatically load it at runtime.
 
 ## 🔧 Development Workflow
 
