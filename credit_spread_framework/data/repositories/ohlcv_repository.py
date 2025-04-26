@@ -21,13 +21,16 @@ def load_bars_from_db(timeframe, start=None, end=None):
 
     query = f"""
         SELECT 
-            bar_id, 
-            timestamp, 
-            [close] as close_price, 
-            spy_volume 
+            bar_id,
+            timestamp,
+            [open]   AS open_price,
+            [high]   AS high,
+            [low]    AS low,
+            [close]  AS close_price,
+            spy_volume
         FROM dbo.{table_name}
         WHERE (:start IS NULL OR timestamp >= :start)
-        AND (:end IS NULL OR timestamp <= :end)
+          AND (:end IS NULL OR timestamp <= :end)
         ORDER BY timestamp
     """
 
@@ -39,7 +42,9 @@ def load_bars_from_db(timeframe, start=None, end=None):
                 "end": end
             }
         )
-        df = pd.DataFrame(result.fetchall(), columns=["bar_id", "timestamp", "close_price", "spy_volume"])
+        df = pd.DataFrame(result.fetchall(), columns=[
+            "bar_id", "timestamp", "open_price", "high", "low", "close_price", "spy_volume"
+        ])
 
     if df.empty:
         print(f"[WARNING] No bars found in {table_name} for the selected range.")
