@@ -1,0 +1,70 @@
+{
+    "instrument": "S&P 500 Index (SPX)",
+    "timeframe": "1D (Daily)",
+    "indicator": "Dynamic Support/Resistance Zones (ChartPrime)",
+    "current_price": 5396.51,
+    "volume_profile": "Displayed on the right (cyan/magenta histogram showing volume by price)",
+    "timestamp": "08:33:19 AM UTC-4",
+    "candle_type": "OHLC",
+    "volume_bars": "Color-coded up/down days below the chart",
+    "support_resistance_levels": {
+        "resistance": [
+            {
+                "level": 6132,
+                "type": "Major Resistance"
+            },
+            {
+                "level": 5726,
+                "type": "Resistance"
+            },
+            {
+                "level": 5431,
+                "type": "Resistance"
+            }
+        ],
+        "support": [
+            {
+                "level": 5178,
+                "type": "Support"
+            },
+            {
+                "level": 4939,
+                "type": "Support"
+            },
+            {
+                "level": 4558,
+                "type": "Support"
+            },
+            {
+                "level": 4095,
+                "type": "Major Support"
+            }
+        ]
+    },
+    "color_codes": {
+        "red_lines": "Resistance Levels",
+        "green_lines": "Support Levels",
+        "bright_green_dot": "Recent bounce (support test)",
+        "bright_red_dot": "Recent rejection (resistance test)",
+        "volume_profile": {
+            "cyan": "High volume",
+            "magenta": "Low volume"
+        }
+    },
+    "indicator_settings": {
+        "weighting": "Time",
+        "number_of_pivots": 50,
+        "filtering": 3,
+        "manual_precision": 75,
+        "pivot_lengths": [
+            5,
+            10,
+            20,
+            50
+        ]
+    },
+    "additional_features": {
+        "session": "Real-time market hours",
+        "distribution": "Right-side volume profile showing high-volume and low-volume nodes"
+    }
+}

@@ -1,0 +1,56 @@
+{
+    "instrument": "S&P 500 Index (SPX)",
+    "timeframe": "3M (3-Minute)",
+    "indicator": "Dynamic Support/Resistance Zones (ChartPrime)",
+    "current_price": 5395.36,
+    "timestamp": "01:27:42 PM UTC-4",
+    "volume_profile": "Right-side histogram showing high and low volume nodes (cyan and magenta)",
+    "support_resistance_levels": {
+        "zones": [
+            {
+                "level": 5680,
+                "type": "Resistance"
+            },
+            {
+                "level": 5640,
+                "type": "Resistance"
+            },
+            {
+                "level": 5550,
+                "type": "Resistance"
+            },
+            {
+                "level": 5425,
+                "type": "Support"
+            },
+            {
+                "level": 5350,
+                "type": "Support"
+            },
+            {
+                "level": 4939,
+                "type": "Support"
+            },
+            {
+                "level": 4558,
+                "type": "Support"
+            }
+        ]
+    },
+    "indicator_settings": {
+        "weighting": "Time",
+        "number_of_pivots": 50,
+        "filtering": 3,
+        "manual_precision": 75,
+        "pivot_lengths": [
+            5,
+            10,
+            20,
+            50
+        ]
+    },
+    "additional_features": {
+        "session": "Real-time market hours",
+        "distribution": "Right-side volume profile"
+    }
+}

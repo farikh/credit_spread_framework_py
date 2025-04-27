@@ -1,0 +1,16 @@
+2025-04-26 13:20:13,462 [INFO] 1m data range: 2023-02-14 18:22:00 to 2025-04-09 20:01:00
+2025-04-26 13:20:13,463 [INFO] Using range: 2023-02-14 18:22:00+00:00 to 2025-04-09 20:01:00+00:00
+2025-04-26 13:20:15,754 [INFO] Loaded 209523 1m bars.
+2025-04-26 13:20:15,764 [INFO] [1/4] Processing timeframe: 3m...
+2025-04-26 13:20:15,778 [INFO] [2/4] Processing timeframe: 15m...
+2025-04-26 13:20:15,796 [INFO] [3/4] Processing timeframe: 1h...
+2025-04-26 13:20:15,817 [INFO] [4/4] Processing timeframe: 1d...
+2025-04-26 13:20:15,915 [INFO] Resampled 537 bars for 1d.
+2025-04-26 13:20:15,982 [INFO] Resampled 4273 bars for 1h.
+2025-04-26 13:20:15,998 [INFO] ✅ Done with 1d.
+2025-04-26 13:20:16,002 [INFO] ✅ Done with 1h.
+2025-04-26 13:20:16,179 [INFO] Resampled 14403 bars for 15m.
+2025-04-26 13:20:16,183 [INFO] ✅ Done with 15m.
+2025-04-26 13:20:17,224 [INFO] Resampled 70116 bars for 3m.
+2025-04-26 13:20:17,229 [INFO] ✅ Done with 3m.
+2025-04-26 13:20:17,241 [INFO] [COMPLETE] All timeframes processed. Check logs for details.

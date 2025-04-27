@@ -1,0 +1,43 @@
+{
+    "settings": {
+        "weighting": "Time",
+        "number_of_pivots": 50,
+        "filtering": 3,
+        "manual_precision": 75,
+        "calculate_on_real_time_only": false
+    },
+    "pivots": {
+        "length_1": 5,
+        "length_2": 10,
+        "length_3": 20,
+        "length_4": 50,
+        "include_pivot_high": true,
+        "include_pivot_low": true
+    },
+    "support_resistance": {
+        "show_support_resistance": true,
+        "show_bounces": 100,
+        "show_sr_zone": false,
+        "sr_zone_value": 88,
+        "support_color": "Green",
+        "resistance_color": "Red"
+    },
+    "distribution": {
+        "show_distribution": true,
+        "show_score_in_distribution": true,
+        "distribution_scale": 30,
+        "show_distribution_overlay": false,
+        "overlay_value": 85,
+        "high_color": "Cyan",
+        "low_color": "Magenta",
+        "text_color": "Black"
+    },
+    "moving_average": {
+        "pivot_level_average": 12,
+        "pivot_level_average_enabled": false,
+        "ma_color": "Purple"
+    },
+    "input_values": {
+        "inputs_in_status_line": true
+    }
+}

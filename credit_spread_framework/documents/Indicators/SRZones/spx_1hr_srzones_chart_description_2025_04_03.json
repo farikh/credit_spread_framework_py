@@ -1,0 +1,78 @@
+{
+    "instrument": "S&P 500 Index (SPX)",
+    "timeframe": "1H (Hourly)",
+    "indicator": "Dynamic Support/Resistance Zones (ChartPrime)",
+    "current_price": 5396.51,
+    "volume_profile": "Displayed on the right (cyan/magenta histogram showing volume by price)",
+    "timestamp": "12:57:05 PM UTC-4",
+    "candle_type": "OHLC",
+    "volume_bars": "Color-coded up/down days below the chart",
+    "support_resistance_levels": {
+        "resistance": [
+            {
+                "level": 6140,
+                "type": "Resistance"
+            },
+            {
+                "level": 6075,
+                "type": "Resistance"
+            },
+            {
+                "level": 5950,
+                "type": "Resistance"
+            },
+            {
+                "level": 5850,
+                "type": "Resistance"
+            },
+            {
+                "level": 5725,
+                "type": "Resistance"
+            },
+            {
+                "level": 5650,
+                "type": "Resistance"
+            },
+            {
+                "level": 5550,
+                "type": "Resistance"
+            }
+        ],
+        "support": [
+            {
+                "level": 5425,
+                "type": "Support"
+            },
+            {
+                "level": 5350,
+                "type": "Support"
+            }
+        ]
+    },
+    "color_codes": {
+        "red_lines": "Resistance Levels",
+        "green_lines": "Support Levels",
+        "bright_green_dot": "Recent bounce (support test)",
+        "bright_red_dot": "Recent rejection (resistance test)",
+        "volume_profile": {
+            "cyan": "High volume",
+            "magenta": "Low volume"
+        }
+    },
+    "indicator_settings": {
+        "weighting": "Time",
+        "number_of_pivots": 50,
+        "filtering": 3,
+        "manual_precision": 75,
+        "pivot_lengths": [
+            5,
+            10,
+            20,
+            50
+        ]
+    },
+    "additional_features": {
+        "session": "Real-time market hours",
+        "distribution": "Right-side volume profile showing high-volume and low-volume nodes"
+    }
+}
