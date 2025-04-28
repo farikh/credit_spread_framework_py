@@ -5,3 +5,8 @@ __pycache__/
 *.pkl
 .env
 resample_output.log
+credit_spread_framework/documents/Indicators/SRZones/_backup/Code Overview.docx
+credit_spread_framework/documents/Indicators/SRZones/_backup/Pine Script Debug Snippet.docx
+credit_spread_framework/documents/Indicators/SRZones/_backup/Pivot HighLow Detection.docx
+credit_spread_framework/documents/Indicators/SRZones/_backup/TradingView to Python Function Mapping (with Equivalents).docx
+credit_spread_framework/documents/Indicators/SRZones/_backup/Validation Plan Matching Python Logic to Pine Script Behavior.docx
