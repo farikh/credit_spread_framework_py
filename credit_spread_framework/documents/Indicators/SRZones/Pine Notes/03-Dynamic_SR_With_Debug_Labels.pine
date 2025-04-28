@@ -1,9 +1,28 @@
+// === HEADER & LICENSING ===
+// Defines the indicator, version, license, and TradingView limits.
+
 // This Pine Script™ code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
 // © ChartPrime
 
 //@version=5
-indicator("Dynamic Support/Resistance Zones [ChartPrime]", overlay = true, max_labels_count = 500, max_boxes_count = 500, max_lines_count = 500, max_bars_back = 4000)
+indicator("(Debug) Dynamic Support/Resistance Zones [ChartPrime]", overlay = true, max_labels_count = 500, max_boxes_count = 500, max_lines_count = 500, max_bars_back = 4000)
  
+// === Debug Settings ===
+target_year  = 2025
+target_month = 4
+target_day   = 3
+
+// === Date Detection Logic ===
+is_target_date = (year == target_year and month == target_month and dayofmonth == target_day)
+show_debug_on_target_date = true  // Set to true to show debug labels on the target date
+
+// === Debug Mode Label (Disabled) ===
+// if barstate.islast
+//     label.new(bar_index, high + (high * 0.01), "DEBUG MODE ACTIVE", color = color.red, style = label.style_label_down, size = size.large)
+
+// === HELPER FUNCTIONS ===
+// Math utilities and signal processing helpers, including sinc filter for smoothing.
+
 sq(float source) => math.pow(source, 2)
 
 sinc(float source, float bandwidth) =>
@@ -145,6 +164,10 @@ method hit(label[] self, float level, int lookback, float atr, color bear_bounce
             candle_bull_bounce = not polarity and percent <= 0.3
             
             if (top_wick_bounce or candle_bear_bounce) and bear_condition
+
+// === VISUALIZATION (LINES, BOXES, LABELS) ===
+// Draws support and resistance zones directly on the chart using boxes and lines.
+
                 self.push(label.new(bar_index - i, h, "⬤", xloc.bar_index, yloc.price, color.new(color.black, 100), label.style_label_down, bear_bounce))
                 continue
 
@@ -158,6 +181,10 @@ method hit(label[] self, float level, int lookback, float atr, color bear_bounce
 
 
 weight_style = input.string("Linear", "Weighting", ["Linear", "Time", "Volume"], group = "Settings", tooltip =
+
+// === ZONE DETECTION LOGIC ===
+// Detects pivot highs and lows, applies smoothing, and identifies support/resistance zones.
+
  " Linear: Each pivot in is treated equally.\n
  Time: Newer pivots will have a greater impact.\n
  Volume: Each pivot will be scored based on its volume.")
@@ -330,6 +357,7 @@ var peak = array.new<line>()
 var peak_box = array.new<box>()
 var heat = array.new<box>()
 var bounce = array.new<label>()
+var debug_labels = array.new<label>()
 
 if dist.size() > 0 and barstate.isconfirmed
     for i = dist.size() - 1 to 0
@@ -356,11 +384,20 @@ if bounce.size() > 0 and barstate.isconfirmed
         bounce.get(i).delete()
         bounce.remove(i)
 
+if debug_labels.size() > 0 and barstate.isconfirmed
+    for i = debug_labels.size() - 1 to 0
+        debug_labels.get(i).delete()
+        debug_labels.remove(i)
+
 float ma = na
 
 speed_hack = real_time_only ? barstate.isrealtime : true
 
 if speed_hack
+
+// === HELPER FUNCTIONS ===
+// Math utilities and signal processing helpers, including sinc filter for smoothing.
+
     filtered_scores = sinc_filter(scores, filter)
     
     if filtered_scores.max() > 0 
@@ -385,16 +422,51 @@ if speed_hack
         
                     score = (bin_top + bin_bottom) / 2
         
+
+// === ZONE DETECTION LOGIC ===
+// Detects pivot highs and lows, applies smoothing, and identifies support/resistance zones.
+
                     score_color = close > score ? support_color : resistance_color
         
                     if show_hits
                         bounce.hit(score, hit_lookback, atr, resistance_color, support_color)
         
+
+// === VISUALIZATION (LINES, BOXES, LABELS) ===
+// Draws support and resistance zones directly on the chart using boxes and lines.
+
                     peak.push(line.new(bar_index + 3, score, bar_index + scale + 3, score, color = score_color, width = 2, extend = extend.left))
         
+
+// === ZONE DETECTION LOGIC ===
+// Detects pivot highs and lows, applies smoothing, and identifies support/resistance zones.
+
                     if show_zone
                         zone_color = color.new(score_color, zone_alpha)
                         peak_box.push(box.new(bar_index - 1, bin_top, bar_index + scale + 3, bin_bottom, zone_color, bgcolor = zone_color, extend = extend.left))
+                    
+                    // === Debug Labels for Zones ===
+                    // Add debug labels directly where the lines are drawn
+                    if barstate.islast or (show_debug_on_target_date and is_target_date)
+                        label_text = 'Zone[' + str.tostring(i) + '] Top: ' + str.tostring(bin_top) +
+                                     '\nBottom: ' + str.tostring(bin_bottom) +
+                                     '\nScore: ' + str.tostring(score)
+                        
+                        // Position labels differently based on whether it's current or historical date
+                        int label_x_pos = na
+                        label lbl = na
+                        
+                        if barstate.islast
+                            // For current date, position at right edge of chart
+                            label_x_pos := bar_index + 30  // Moved more to the left (was +50)
+                            lbl := label.new(label_x_pos, score, label_text, color=score_color, style=label.style_label_left, size=size.normal, textcolor=color.white)  // Changed size to normal
+                        else if is_target_date
+                            // For historical date, position directly over the line
+                            label_x_pos := bar_index
+                            lbl := label.new(label_x_pos, score, label_text, color=score_color, style=label.style_label_down, size=size.normal, textcolor=color.white)  // Changed size to normal
+                        
+                        if not na(lbl)
+                            debug_labels.push(lbl)
         
             if show_dist or heat_map
                 for i = 0 to filtered_scores.size() - 1
@@ -412,6 +484,10 @@ if speed_hack
                     if raw_score > 0
                         if show_dist
                             dist.push(
+
+// === VISUALIZATION (LINES, BOXES, LABELS) ===
+// Draws support and resistance zones directly on the chart using boxes and lines.
+
                                      box.new(bar_index + scale - score + 3, bin_top, bar_index + scale + 3, bin_bottom, bgcolor = score_color, border_color = score_color, text = txt, text_color = txt_color)
                                  )
             
@@ -422,6 +498,10 @@ if speed_hack
         
         
         ma := ta.sma(ma(filtered_scores, min_range, bin_size, enable_ma), ma_smoothing)
+
+
+// === FINAL OUTPUT / PLOTTING ===
+// Handles any final plotting, such as static lines or legends (if present).
 
 ma_plot = plot(ma, "MA", ma_color, 2)
 ma_plot_top = plot(ma + atr / 2, "", color.new(ma_color, 100), display = display.data_window, editable = false)
