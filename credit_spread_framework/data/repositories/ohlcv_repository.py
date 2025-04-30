@@ -2,7 +2,7 @@ from credit_spread_framework.data.db_engine import get_engine
 import pandas as pd
 from sqlalchemy import text
 
-def load_bars_from_db(timeframe, start=None, end=None):
+def load_bars_from_db(timeframe, start=None, end=None, limit=None):
     engine = get_engine()
 
     # Correct mapping based on your confirmed schema
@@ -19,20 +19,42 @@ def load_bars_from_db(timeframe, start=None, end=None):
 
     table_name = table_map[timeframe]
 
-    query = f"""
-        SELECT 
-            bar_id,
-            timestamp,
-            [open]   AS open_price,
-            [high]   AS high,
-            [low]    AS low,
-            [close]  AS close_price,
-            spy_volume
-        FROM dbo.{table_name}
-        WHERE (:start IS NULL OR timestamp >= :start)
-          AND (:end IS NULL OR timestamp <= :end)
-        ORDER BY timestamp
-    """
+    # If limit is provided, use a more efficient query that gets the most recent bars
+    # relative to the end date in descending order, then reverses them back to ascending
+    if limit is not None:
+        query = f"""
+            SELECT * FROM (
+                SELECT TOP {limit}
+                    bar_id,
+                    timestamp,
+                    [open]   AS open_price,
+                    [high]   AS high,
+                    [low]    AS low,
+                    [close]  AS close_price,
+                    spy_volume
+                FROM dbo.{table_name}
+                WHERE (:start IS NULL OR timestamp >= :start)
+                  AND (:end IS NULL OR timestamp <= :end)
+                ORDER BY timestamp DESC
+            ) sub
+            ORDER BY timestamp ASC
+        """
+    else:
+        # Original query without limit
+        query = f"""
+            SELECT 
+                bar_id,
+                timestamp,
+                [open]   AS open_price,
+                [high]   AS high,
+                [low]    AS low,
+                [close]  AS close_price,
+                spy_volume
+            FROM dbo.{table_name}
+            WHERE (:start IS NULL OR timestamp >= :start)
+              AND (:end IS NULL OR timestamp <= :end)
+            ORDER BY timestamp
+        """
 
     with engine.begin() as conn:
         result = conn.execute(
