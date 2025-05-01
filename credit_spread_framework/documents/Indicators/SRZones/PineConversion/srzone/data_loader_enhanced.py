@@ -193,147 +193,28 @@ def load_data(source_type, timeframe=None, file_path=None, start_date=None, end_
 
         # Import here to avoid circular imports
         try:
-            from credit_spread_framework.data.db_engine import get_engine
-            from sqlalchemy import text
+            # Import the enhanced data loader
+            from credit_spread_framework.data.repositories.ohlcv_repository_enhanced_corrected import load_bars_from_db
             if debug:
-                print("Successfully imported required modules")
+                print("Successfully imported enhanced load_bars_from_db (corrected version)")
         except ImportError as e:
-            error_msg = f"Could not import required modules: {str(e)}"
+            error_msg = f"Could not import enhanced load_bars_from_db: {str(e)}"
             print(error_msg)
             raise ImportError(error_msg)
-
-        # Convert string dates to datetime objects if needed
-        if isinstance(start_date, str):
-            start_date = datetime.fromisoformat(start_date.replace('Z', '+00:00').replace(' ', 'T'))
-        if isinstance(end_date, str):
-            end_date = datetime.fromisoformat(end_date.replace('Z', '+00:00').replace(' ', 'T'))
-
-        # If the same date is specified for both start and end, ensure full 24-hour coverage
-        if start_date and end_date and start_date.date() == end_date.date():
-            # Set start to beginning of day (00:00:00)
-            start_date = datetime.combine(start_date.date(), datetime.min.time())
-            # Set end to end of day (23:59:59)
-            end_date = datetime.combine(end_date.date(), datetime.max.time())
-
-            if debug:
-                print(f"Adjusted date range to cover full 24 hours: {start_date} to {end_date}")
 
         # If end_date is not specified, use current date
         if end_date is None and start_date is None:
             end_date = datetime.now()
 
         if debug:
-            print(f"Using date range: start={start_date}, end={end_date}")
+            print(f"Calling enhanced load_bars_from_db with timeframe={timeframe}, start={start_date}, end={end_date}")
 
-        # Table mapping
-        table_map = {
-            "1m": "spx_ohlcv_1m",
-            "3m": "spx_ohlcv_3m",
-            "15m": "spx_ohlcv_15m",
-            "1h": "spx_ohlcv_1h",
-            "1d": "spx_ohlcv_1d",
-        }
-
-        if timeframe not in table_map:
-            raise ValueError(f"Unsupported timeframe: {timeframe}. Must be one of {list(table_map.keys())}")
-
-        table_name = table_map[timeframe]
-
-        # Build the improved SQL query
-        if start_date is None and end_date is not None:
-            # Case 1: Only end date specified
-            query = f"""
-                SELECT * FROM (
-                    SELECT TOP {max_bars}
-                        bar_id,
-                        timestamp,
-                        [open]   AS open_price,
-                        [high]   AS high,
-                        [low]    AS low,
-                        [close]  AS close_price,
-                        spy_volume
-                    FROM dbo.{table_name}
-                    WHERE CONVERT(date, timestamp) <= CONVERT(date, :end)
-                    ORDER BY timestamp DESC
-                ) sub
-                ORDER BY timestamp ASC
-            """
-            params = {"end": end_date}
-        elif start_date is not None:
-            # Case 2 & 3: Start date specified (with or without end date)
-            # Use a UNION query to get both the range data and historical data in one query
-            query = f"""
-                -- Get records in the date range
-                SELECT
-                    bar_id,
-                    timestamp,
-                    [open]   AS open_price,
-                    [high]   AS high,
-                    [low]    AS low,
-                    [close]  AS close_price,
-                    spy_volume
-                FROM dbo.{table_name}
-                WHERE CONVERT(date, timestamp) >= CONVERT(date, :start)
-                  AND (:end IS NULL OR CONVERT(date, timestamp) <= CONVERT(date, :end))
-
-                UNION ALL
-
-                -- Get historical records before the start date
-                SELECT * FROM (
-                    SELECT TOP {max_bars}
-                        bar_id,
-                        timestamp,
-                        [open]   AS open_price,
-                        [high]   AS high,
-                        [low]    AS low,
-                        [close]  AS close_price,
-                        spy_volume
-                    FROM dbo.{table_name}
-                    WHERE CONVERT(date, timestamp) < CONVERT(date, :start)
-                    ORDER BY timestamp DESC
-                ) sub
-
-                -- Order the combined results
-                ORDER BY timestamp ASC
-            """
-            params = {"start": start_date, "end": end_date}
-        else:
-            # Case 4: No dates specified, get the most recent data
-            query = f"""
-                SELECT * FROM (
-                    SELECT TOP {max_bars}
-                        bar_id,
-                        timestamp,
-                        [open]   AS open_price,
-                        [high]   AS high,
-                        [low]    AS low,
-                        [close]  AS close_price,
-                        spy_volume
-                    FROM dbo.{table_name}
-                    ORDER BY timestamp DESC
-                ) sub
-                ORDER BY timestamp ASC
-            """
-            params = {}
-
-        if debug:
-            print(f"Executing query on table {table_name}:")
-            print(query)
-            print(f"With parameters: {params}")
-
-        # Execute the query
+        # Load data from SQL with limit directly in the query
         try:
-            engine = get_engine()
-            with engine.begin() as conn:
-                result = conn.execute(text(query), params)
-                df = pd.DataFrame(result.fetchall(), columns=[
-                    "bar_id", "timestamp", "open_price", "high", "low", "close_price", "spy_volume"
-                ])
-
+            df = load_bars_from_db(timeframe, start=start_date, end=end_date, limit=max_bars)
             if debug:
                 print(f"Loaded {len(df)} rows from SQL database with limit={max_bars}")
                 if not df.empty:
-                    print(f"Date range: {df['timestamp'].min()} to {df['timestamp'].max()}")
                     print(f"Columns: {df.columns.tolist()}")
                     print(f"First row: {df.iloc[0].to_dict()}")
                     print(f"Last row: {df.iloc[-1].to_dict()}")
